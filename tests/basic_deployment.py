@@ -21,7 +21,6 @@ from lxd_amulet_utils import (
 )
 
 
-# u = OpenStackAmuletUtils(DEBUG)
 u = LXDAmuletUtils(DEBUG)
 
 LXD_IMAGE_URL = 'http://cloud-images.ubuntu.com/trusty/current/trusty-server-cloudimg-amd64-root.tar.xz'  # noqa
@@ -442,12 +441,6 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         """Inspect and validate vgs on all lxd units."""
         u.log.debug('Checking logical volume groups on lxd units...')
 
-        u.log.warn('Skipping test due to http://pastebin.ubuntu.com/15111453/')
-        # Disabled, pending resolution of lxd lvm issue, where LXDPool
-        # and logical volumes don't always get created on all units.
-        #   http://pastebin.ubuntu.com/15111453/
-        return
-
         cmd = 'sudo vgs'
         expected = ['lxd_vg']
 
@@ -473,12 +466,6 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         """Inspect and validate lvs on all lxd units."""
         u.log.debug('Checking logical volumes on lxd units...')
 
-        u.log.warn('Skipping test due to http://pastebin.ubuntu.com/15111453/')
-        # Disabled, pending resolution of lxd lvm issue, where LXDPool
-        # and logical volumes don't always get created on all units.
-        #   http://pastebin.ubuntu.com/15111453/
-        return
-
         cmd = 'sudo lvs'
         expected = ['LXDPool']
 
@@ -503,12 +490,6 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
     def test_402_lxc_config_validate(self):
         """Inspect and validate lxc running config on all lxd units."""
         u.log.debug('Checking lxc config on lxd units...')
-
-        u.log.warn('Skipping test due to http://pastebin.ubuntu.com/15111453/')
-        # Disabled, pending resolution of lxd lvm issue, where LXDPool
-        # and logical volumes don't always get created on all units.
-        #   http://pastebin.ubuntu.com/15111453/
-        return
 
         cmd = 'sudo lxc config show'
         expected = [
