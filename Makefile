@@ -2,14 +2,10 @@
 PYTHON := /usr/bin/env python
 
 lint:
-	@flake8 --exclude hooks/charmhelpers,tests/charmhelpers \
-        hooks unit_tests tests
-	@charm proof
+	@tox -e pep8
 
 test:
-	@# Bundletester expects unit tests here.
-	@echo Starting unit tests...
-	@$(PYTHON) /usr/bin/nosetests -v --nologcapture --with-coverage unit_tests
+	tox -e py27
 
 bin/charm_helpers_sync.py:
 	@mkdir -p bin
