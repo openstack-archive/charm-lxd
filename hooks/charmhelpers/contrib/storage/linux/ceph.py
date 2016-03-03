@@ -24,6 +24,8 @@
 #  Adam Gandelman <adamg@ubuntu.com>
 #
 import bisect
+import errno
+import hashlib
 import six
 
 import os
@@ -120,6 +122,7 @@ class PoolCreationError(Exception):
     """
     A custom error to inform the caller that a pool creation failed.  Provides an error message
     """
+
     def __init__(self, message):
         super(PoolCreationError, self).__init__(message)
 
@@ -129,6 +132,7 @@ class Pool(object):
     An object oriented approach to Ceph pool creation. This base class is inherited by ReplicatedPool and ErasurePool.
     Do not call create() on this base class as it will not do anything.  Instantiate a child class and call create().
     """
+
     def __init__(self, service, name):
         self.service = service
         self.name = name
@@ -161,7 +165,7 @@ class Pool(object):
         :return: None
         """
         # read-only is easy, writeback is much harder
-        mode = get_cache_mode(cache_pool)
+        mode = get_cache_mode(self.service, cache_pool)
         if mode == 'readonly':
             check_call(['ceph', '--id', self.service, 'osd', 'tier', 'cache-mode', cache_pool, 'none'])
             check_call(['ceph', '--id', self.service, 'osd', 'tier', 'remove', self.name, cache_pool])
@@ -169,7 +173,7 @@ class Pool(object):
         elif mode == 'writeback':
             check_call(['ceph', '--id', self.service, 'osd', 'tier', 'cache-mode', cache_pool, 'forward'])
             # Flush the cache and wait for it to return
-            check_call(['ceph', '--id', self.service, '-p', cache_pool, 'cache-flush-evict-all'])
+            check_call(['rados', '--id', self.service, '-p', cache_pool, 'cache-flush-evict-all'])
             check_call(['ceph', '--id', self.service, 'osd', 'tier', 'remove-overlay', self.name])
             check_call(['ceph', '--id', self.service, 'osd', 'tier', 'remove', self.name, cache_pool])
 
@@ -180,36 +184,41 @@ class Pool(object):
         :return: int.  The number of pgs to use.
         """
         validator(value=pool_size, valid_type=int)
-        osds = get_osds(self.service)
-        if not osds:
+        osd_list = get_osds(self.service)
+        if not osd_list:
             # NOTE(james-page): Default to 200 for older ceph versions
             # which don't support OSD query from cli
             return 200
 
+        osd_list_length = len(osd_list)
         # Calculate based on Ceph best practices
-        if osds < 5:
+        if osd_list_length < 5:
             return 128
-        elif 5 < osds < 10:
+        elif 5 < osd_list_length < 10:
             return 512
-        elif 10 < osds < 50:
+        elif 10 < osd_list_length < 50:
             return 4096
         else:
-            estimate = (osds * 100) / pool_size
+            estimate = (osd_list_length * 100) / pool_size
             # Return the next nearest power of 2
             index = bisect.bisect_right(powers_of_two, estimate)
             return powers_of_two[index]
 
 
 class ReplicatedPool(Pool):
-    def __init__(self, service, name, replicas=2):
+    def __init__(self, service, name, pg_num=None, replicas=2):
         super(ReplicatedPool, self).__init__(service=service, name=name)
         self.replicas = replicas
+        if pg_num is None:
+            self.pg_num = self.get_pgs(self.replicas)
+        else:
+            self.pg_num = pg_num
 
     def create(self):
         if not pool_exists(self.service, self.name):
             # Create it
-            pgs = self.get_pgs(self.replicas)
-            cmd = ['ceph', '--id', self.service, 'osd', 'pool', 'create', self.name, str(pgs)]
+            cmd = ['ceph', '--id', self.service, 'osd', 'pool', 'create',
+                   self.name, str(self.pg_num)]
             try:
                 check_call(cmd)
             except CalledProcessError:
@@ -241,7 +250,7 @@ class ErasurePool(Pool):
 
             pgs = self.get_pgs(int(erasure_profile['k']) + int(erasure_profile['m']))
             # Create it
-            cmd = ['ceph', '--id', self.service, 'osd', 'pool', 'create', self.name, str(pgs),
+            cmd = ['ceph', '--id', self.service, 'osd', 'pool', 'create', self.name, str(pgs), str(pgs),
                    'erasure', self.erasure_code_profile]
             try:
                 check_call(cmd)
@@ -250,6 +259,134 @@ class ErasurePool(Pool):
 
     """Get an existing erasure code profile if it already exists.
        Returns json formatted output"""
+
+
+def get_mon_map(service):
+    """
+    Returns the current monitor map.
+    :param service: six.string_types. The Ceph user name to run the command under
+    :return: json string. :raise: ValueError if the monmap fails to parse.
+      Also raises CalledProcessError if our ceph command fails
+    """
+    try:
+        mon_status = check_output(
+            ['ceph', '--id', service,
+             'mon_status', '--format=json'])
+        try:
+            return json.loads(mon_status)
+        except ValueError as v:
+            log("Unable to parse mon_status json: {}. Error: {}".format(
+                mon_status, v.message))
+            raise
+    except CalledProcessError as e:
+        log("mon_status command failed with message: {}".format(
+            e.message))
+        raise
+
+
+def hash_monitor_names(service):
+    """
+    Uses the get_mon_map() function to get information about the monitor
+    cluster.
+    Hash the name of each monitor.  Return a sorted list of monitor hashes
+    in an ascending order.
+    :param service: six.string_types. The Ceph user name to run the command under
+    :rtype : dict.   json dict of monitor name, ip address and rank
+    example: {
+        'name': 'ip-172-31-13-165',
+        'rank': 0,
+        'addr': '172.31.13.165:6789/0'}
+    """
+    try:
+        hash_list = []
+        monitor_list = get_mon_map(service=service)
+        if monitor_list['monmap']['mons']:
+            for mon in monitor_list['monmap']['mons']:
+                hash_list.append(
+                    hashlib.sha224(mon['name'].encode('utf-8')).hexdigest())
+            return sorted(hash_list)
+        else:
+            return None
+    except (ValueError, CalledProcessError):
+        raise
+
+
+def monitor_key_delete(service, key):
+    """
+    Delete a key and value pair from the monitor cluster
+    :param service: six.string_types. The Ceph user name to run the command under
+    Deletes a key value pair on the monitor cluster.
+    :param key: six.string_types.  The key to delete.
+    """
+    try:
+        check_output(
+            ['ceph', '--id', service,
+             'config-key', 'del', str(key)])
+    except CalledProcessError as e:
+        log("Monitor config-key put failed with message: {}".format(
+            e.output))
+        raise
+
+
+def monitor_key_set(service, key, value):
+    """
+    Sets a key value pair on the monitor cluster.
+    :param service: six.string_types. The Ceph user name to run the command under
+    :param key: six.string_types.  The key to set.
+    :param value: The value to set.  This will be converted to a string
+        before setting
+    """
+    try:
+        check_output(
+            ['ceph', '--id', service,
+             'config-key', 'put', str(key), str(value)])
+    except CalledProcessError as e:
+        log("Monitor config-key put failed with message: {}".format(
+            e.output))
+        raise
+
+
+def monitor_key_get(service, key):
+    """
+    Gets the value of an existing key in the monitor cluster.
+    :param service: six.string_types. The Ceph user name to run the command under
+    :param key: six.string_types.  The key to search for.
+    :return: Returns the value of that key or None if not found.
+    """
+    try:
+        output = check_output(
+            ['ceph', '--id', service,
+             'config-key', 'get', str(key)])
+        return output
+    except CalledProcessError as e:
+        log("Monitor config-key get failed with message: {}".format(
+            e.output))
+        return None
+
+
+def monitor_key_exists(service, key):
+    """
+    Searches for the existence of a key in the monitor cluster.
+    :param service: six.string_types. The Ceph user name to run the command under
+    :param key: six.string_types.  The key to search for
+    :return: Returns True if the key exists, False if not and raises an
+     exception if an unknown error occurs. :raise: CalledProcessError if
+     an unknown error occurs
+    """
+    try:
+        check_call(
+            ['ceph', '--id', service,
+             'config-key', 'exists', str(key)])
+        # I can return true here regardless because Ceph returns
+        # ENOENT if the key wasn't found
+        return True
+    except CalledProcessError as e:
+        if e.returncode == errno.ENOENT:
+            return False
+        else:
+            log("Unknown error from ceph config-get exists: {} {}".format(
+                e.returncode, e.output))
+            raise
 
 
 def get_erasure_profile(service, name):
@@ -322,7 +459,8 @@ def set_pool_quota(service, pool_name, max_bytes):
     :return: None.  Can raise CalledProcessError
     """
     # Set a byte quota on a RADOS pool in ceph.
-    cmd = ['ceph', '--id', service, 'osd', 'pool', 'set-quota', pool_name, 'max_bytes', max_bytes]
+    cmd = ['ceph', '--id', service, 'osd', 'pool', 'set-quota', pool_name,
+           'max_bytes', str(max_bytes)]
     try:
         check_call(cmd)
     except CalledProcessError:
@@ -343,7 +481,25 @@ def remove_pool_quota(service, pool_name):
         raise
 
 
-def create_erasure_profile(service, profile_name, erasure_plugin_name='jerasure', failure_domain='host',
+def remove_erasure_profile(service, profile_name):
+    """
+    Create a new erasure code profile if one does not already exist for it.  Updates
+    the profile if it exists. Please see http://docs.ceph.com/docs/master/rados/operations/erasure-code-profile/
+    for more details
+    :param service: six.string_types. The Ceph user name to run the command under
+    :param profile_name: six.string_types
+    :return: None.  Can raise CalledProcessError
+    """
+    cmd = ['ceph', '--id', service, 'osd', 'erasure-code-profile', 'rm',
+           profile_name]
+    try:
+        check_call(cmd)
+    except CalledProcessError:
+        raise
+
+
+def create_erasure_profile(service, profile_name, erasure_plugin_name='jerasure',
+                           failure_domain='host',
                            data_chunks=2, coding_chunks=1,
                            locality=None, durability_estimator=None):
     """

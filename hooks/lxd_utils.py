@@ -1,8 +1,14 @@
 import glob
+import io
+import json
 import pwd
 import os
-
+import shutil
 from subprocess import call, check_call, check_output, CalledProcessError
+import subprocess
+import tarfile
+import tempfile
+import uuid
 
 from charmhelpers.core.templating import render
 from charmhelpers.core.hookenv import (
@@ -206,6 +212,98 @@ def configure_lxd_block():
         create_lvm_volume_group('lxd_vg', dev)
         cmd = ['lxc', 'config', 'set', 'storage.lvm_vg_name', 'lxd_vg']
         check_call(cmd)
+
+        # The LVM thinpool logical volume is lazily created, either on
+        # image import or container creation. This will force LV creation.
+        create_and_import_busybox_image()
+
+
+def create_and_import_busybox_image():
+    """Create a busybox image for lxd.
+
+    This creates a busybox image without reaching out to
+    the network.
+
+    This function is, for the most part, heavily based on
+    the busybox image generation in the pylxd integration
+    tests.
+    """
+    workdir = tempfile.mkdtemp()
+    xz = "xz"
+
+    destination_tar = os.path.join(workdir, "busybox.tar")
+    target_tarball = tarfile.open(destination_tar, "w:")
+
+    metadata = {'architecture': os.uname()[4],
+                'creation_date': int(os.stat("/bin/busybox").st_ctime),
+                'properties': {
+                    'os': "Busybox",
+                    'architecture': os.uname()[4],
+                    'description': "Busybox %s" % os.uname()[4],
+                    'name': "busybox-%s" % os.uname()[4],
+                    # Don't overwrite actual busybox images.
+                    'obfuscate': str(uuid.uuid4)}}
+
+    # Add busybox
+    with open("/bin/busybox", "rb") as fd:
+        busybox_file = tarfile.TarInfo()
+        busybox_file.size = os.stat("/bin/busybox").st_size
+        busybox_file.mode = 0o755
+        busybox_file.name = "rootfs/bin/busybox"
+        target_tarball.addfile(busybox_file, fd)
+
+    # Add symlinks
+    busybox = subprocess.Popen(["/bin/busybox", "--list-full"],
+                               stdout=subprocess.PIPE,
+                               universal_newlines=True)
+    busybox.wait()
+
+    for path in busybox.stdout.read().split("\n"):
+        if not path.strip():
+            continue
+
+        symlink_file = tarfile.TarInfo()
+        symlink_file.type = tarfile.SYMTYPE
+        symlink_file.linkname = "/bin/busybox"
+        symlink_file.name = "rootfs/%s" % path.strip()
+        target_tarball.addfile(symlink_file)
+
+    # Add directories
+    for path in ("dev", "mnt", "proc", "root", "sys", "tmp"):
+        directory_file = tarfile.TarInfo()
+        directory_file.type = tarfile.DIRTYPE
+        directory_file.name = "rootfs/%s" % path
+        target_tarball.addfile(directory_file)
+
+    # Add the metadata file
+    metadata_yaml = json.dumps(metadata, sort_keys=True,
+                               indent=4, separators=(',', ': '),
+                               ensure_ascii=False).encode('utf-8') + b"\n"
+
+    metadata_file = tarfile.TarInfo()
+    metadata_file.size = len(metadata_yaml)
+    metadata_file.name = "metadata.yaml"
+    target_tarball.addfile(metadata_file,
+                           io.BytesIO(metadata_yaml))
+
+    inittab = tarfile.TarInfo()
+    inittab.size = 1
+    inittab.name = "/rootfs/etc/inittab"
+    target_tarball.addfile(inittab, io.BytesIO(b"\n"))
+
+    target_tarball.close()
+
+    # Compress the tarball
+    r = subprocess.call([xz, "-9", destination_tar])
+    if r:
+        raise Exception("Failed to compress: %s" % destination_tar)
+
+    image_file = destination_tar+".xz"
+
+    cmd = ['lxc', 'image', 'import', image_file, '--alias', 'busybox']
+    check_call(cmd)
+
+    shutil.rmtree(workdir)
 
 
 def determine_packages():
