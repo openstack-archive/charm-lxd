@@ -206,6 +206,10 @@ def configure_lxd_block():
         create_lvm_volume_group('lxd_vg', dev)
         cmd = ['lxc', 'config', 'set', 'storage.lvm_vg_name', 'lxd_vg']
         check_call(cmd)
+        # The LVM thinpool logical volume is lazily created, either on
+        # image import or container creation. This will force LV creation.
+        cmd = ['lxd-images', 'import', 'busybox']
+        check_call(cmd)
 
 
 def determine_packages():
