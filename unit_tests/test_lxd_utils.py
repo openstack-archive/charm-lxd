@@ -22,7 +22,6 @@ class TestLXDUtilsDeterminePackages(testing.CharmTestCase):
         expected = [
             'btrfs-tools',
             'thin-provisioning-tools',
-            'criu',
             'lvm2',
             'lxd',
             'lxd-client',
