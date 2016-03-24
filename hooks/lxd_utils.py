@@ -52,8 +52,8 @@ BASE_PACKAGES = [
     'btrfs-tools',
     'lvm2',
     'thin-provisioning-tools',
-    'criu'
 ]
+CRIU_PACKAGES = ['criu']
 LXD_PACKAGES = ['lxd', 'lxd-client']
 LXD_SOURCE_PACKAGES = [
     'lxc',
@@ -309,6 +309,9 @@ def create_and_import_busybox_image():
 def determine_packages():
     packages = [] + BASE_PACKAGES
     packages = list(set(packages))
+    ubuntu_release = lsb_release()['DISTRIB_CODENAME'].lower()
+    if ubuntu_release == "xenial":
+        packages.extend(CRIU_PACKAGES)
     if config('use-source'):
         packages.extend(LXD_SOURCE_PACKAGES)
     else:
