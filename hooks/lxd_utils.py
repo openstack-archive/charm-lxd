@@ -52,7 +52,8 @@ BASE_PACKAGES = [
     'btrfs-tools',
     'lvm2',
     'thin-provisioning-tools',
-    'criu'
+    'criu',
+    'zfsutils-linux'
 ]
 LXD_PACKAGES = ['lxd', 'lxd-client']
 LXD_SOURCE_PACKAGES = [
@@ -216,6 +217,14 @@ def configure_lxd_block():
         # The LVM thinpool logical volume is lazily created, either on
         # image import or container creation. This will force LV creation.
         create_and_import_busybox_image()
+    elif config('storage-type') == 'zfs':
+        status_set('maintenance',
+                   'Configuring zfs container storage')
+        cmd = ['zpool', 'create', '-f', 'lxd', dev]
+        check_call(cmd)
+
+        cmd = ['lxc', 'config', 'set', 'storage.zfs_pool_name', 'lxd']
+        check_call(cmd)
 
 
 def create_and_import_busybox_image():

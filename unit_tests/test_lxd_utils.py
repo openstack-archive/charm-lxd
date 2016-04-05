@@ -21,16 +21,17 @@ class TestLXDUtilsDeterminePackages(testing.CharmTestCase):
         """A list of LXD packages should be returned."""
         expected = [
             'btrfs-tools',
-            'thin-provisioning-tools',
             'criu',
             'lvm2',
             'lxd',
             'lxd-client',
+            'thin-provisioning-tools',
+            'zfsutils-linux',
         ]
 
         packages = lxd_utils.determine_packages()
 
-        self.assertEqual(expected, packages)
+        self.assertEqual(expected, sorted(packages))
 
 
 class TestLXDUtilsCreateAndImportBusyboxImage(testing.CharmTestCase):
