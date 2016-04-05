@@ -95,7 +95,8 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         lxd_config = {
             'block-device': '/dev/vdb',
             'ephemeral-unmount': '/mnt',
-            'storage-type': 'lvm'
+            'storage-type': 'lvm',
+            'overwrite': True
         }
 
         nova_config = {
@@ -366,7 +367,7 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
 
         expected = {
             'DEFAULT': {
-                'compute_driver': 'nclxd.nova.virt.lxd.LXDDriver'
+                'compute_driver': 'nova_lxd.nova.virt.lxd.LXDDriver'
             }
         }
 
@@ -495,7 +496,6 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         expected = [
             'core.https_address: \'[::]\'',
             'core.trust_password: true',
-            'images.remote_cache_expiry: "10"',
             'storage.lvm_thinpool_name: LXDPool',
             'storage.lvm_vg_name: lxd_vg',
         ]
