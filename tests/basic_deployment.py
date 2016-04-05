@@ -95,7 +95,8 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         lxd_config = {
             'block-device': '/dev/vdb',
             'ephemeral-unmount': '/mnt',
-            'storage-type': 'lvm'
+            'storage-type': 'lvm',
+            'overwrite': True
         }
 
         nova_config = {
@@ -123,9 +124,18 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
     def _initialize_tests(self):
         """Perform final initialization before tests get run."""
 
+        u.log.debug(self.d.sentry['lxd'])
         # Access the sentries for inspecting service units
         self.lxd0_sentry = self.d.sentry['lxd'][0]
-        self.lxd1_sentry = self.d.sentry['lxd'][1]
+        # XXX: rockstar (6 Mar 2016) - Due to what might be an amulet
+        # bug, it's possible that we only detect a single lxd instance.
+        # Either that, or something drastically more nefarious is going
+        # on. In order to move ahead, this hack is put in place.
+        # See https://github.com/juju/amulet/issues/122
+        try:
+            self.lxd1_sentry = self.d.sentry['lxd'][1]
+        except IndexError:
+            self.lxd1_sentry = None
         self.compute0_sentry = self.d.sentry['nova-compute'][0]
         self.compute1_sentry = self.d.sentry['nova-compute'][1]
 
@@ -182,7 +192,6 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
 
         services = {
             self.lxd0_sentry: ['lxd'],
-            self.lxd1_sentry: ['lxd'],
             self.compute0_sentry: ['nova-compute',
                                    'nova-network',
                                    'nova-api'],
@@ -199,6 +208,10 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
             self.glance_sentry: ['glance-registry',
                                  'glance-api']
         }
+        # XXX: rockstar (6 Mar 2016) - See related XXX comment
+        # above.
+        if self.lxd1_sentry is not None:
+            services[self.lxd1_sentry] = ['lxd']
 
         ret = u.validate_services_by_name(services)
         if ret:
@@ -232,7 +245,6 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         if self._get_openstack_release() < self.trusty_kilo:
             expected.update({
                 's3': [endpoint_vol],
-                'ec2': [endpoint_vol]
             })
 
         actual = self.keystone_demo.service_catalog.get_endpoints()
@@ -366,7 +378,7 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
 
         expected = {
             'DEFAULT': {
-                'compute_driver': 'nclxd.nova.virt.lxd.LXDDriver'
+                'compute_driver': 'nova_lxd.nova.virt.lxd.LXDDriver'
             }
         }
 
@@ -403,9 +415,8 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
                 'force_dhcp_release': 'True',
                 'verbose': 'False',
                 'use_syslog': 'False',
-                'ec2_private_dns_show_ip': 'True',
                 'api_paste_config': '/etc/nova/api-paste.ini',
-                'enabled_apis': 'ec2,osapi_compute,metadata',
+                'enabled_apis': 'osapi_compute,metadata',
                 'auth_strategy': 'keystone',
                 'flat_interface': 'eth1',
                 'network_manager': 'nova.network.manager.FlatDHCPManager',
@@ -495,7 +506,6 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         expected = [
             'core.https_address: \'[::]\'',
             'core.trust_password: true',
-            'images.remote_cache_expiry: "10"',
             'storage.lvm_thinpool_name: LXDPool',
             'storage.lvm_vg_name: lxd_vg',
         ]

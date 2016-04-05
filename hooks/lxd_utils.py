@@ -146,7 +146,7 @@ def configure_lxd_block():
     '''Configure a block device for use by LXD for containers'''
     log('Configuring LXD container storage')
     if filesystem_mounted('/var/lib/lxd'):
-        log('/varlib/lxd already configured, skipping')
+        log('/var/lib/lxd already configured, skipping')
         return
 
     lxd_block_device = config('block-device')
