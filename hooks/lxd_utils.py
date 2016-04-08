@@ -184,7 +184,7 @@ def configure_lxd_block():
     if config('storage-type') == 'btrfs':
         status_set('maintenance',
                    'Configuring btrfs container storage')
-        service_stop('lxd')
+        lxd_stop()
         cmd = ['mkfs.btrfs', '-f', dev]
         check_call(cmd)
         mount(dev,
@@ -194,7 +194,7 @@ def configure_lxd_block():
               filesystem='btrfs')
         cmd = ['btrfs', 'quota', 'enable', '/var/lib/lxd']
         check_call(cmd)
-        service_start('lxd')
+        lxd_start()
     elif config('storage-type') == 'lvm':
         if (is_lvm_physical_volume(dev) and
                 list_lvm_volume_group(dev) == 'lxd_vg'):
@@ -402,6 +402,19 @@ def lxd_running():
         return True
     except CalledProcessError:
         return False
+
+
+def lxd_stop():
+    '''Stop LXD.socket and lxd.service'''
+    cmd = ['systemctl', 'stop', 'lxd.socket']
+    check_call(cmd)
+    cmd = ['systemctl', 'stop', 'lxd']
+    check_call(cmd)
+
+
+def lxd_start():
+    cmd = ['systemctl', 'start', 'lxd']
+    check_call(cmd)
 
 
 def assess_status():
