@@ -85,3 +85,37 @@ class TestLXDUtilsCreateAndImportBusyboxImage(testing.CharmTestCase):
         Popen_rv.stdout.read.assert_called_once_with()
         stat.assert_called_with('/bin/busybox')
         mock_open.assert_called_once_with('/bin/busybox', 'rb')
+
+
+class TestGetBlockDevices(testing.CharmTestCase):
+    """Tests for hooks.lxd_utils.get_block_devices."""
+
+    TO_PATCH = [
+        'config',
+    ]
+
+    def setUp(self):
+        super(TestGetBlockDevices, self).setUp(
+            lxd_utils, self.TO_PATCH)
+        self.config.side_effect = self.test_config.get
+
+    def testEmpty(self):
+        """When no config is specified, an empty list is returned."""
+        devices = lxd_utils.get_block_devices()
+
+        self.assertEqual([], devices)
+
+    def testSingleDevice(self):
+        """Return a list with the single device."""
+        self.test_config.set('block-devices', '/dev/vdb')
+        devices = lxd_utils.get_block_devices()
+
+        self.assertEqual(['/dev/vdb'], devices)
+
+    def testMultipleDevices(self):
+        """Return a list with all devices."""
+        self.test_config.set('block-devices', '/dev/vdb /dev/vdc')
+
+        devices = lxd_utils.get_block_devices()
+
+        self.assertEqual(['/dev/vdb', '/dev/vdc'], devices)

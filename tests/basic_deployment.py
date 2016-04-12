@@ -93,7 +93,7 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         }
 
         lxd_config = {
-            'block-device': '/dev/vdb',
+            'block-devices': '/dev/vdb',
             'ephemeral-unmount': '/mnt',
             'storage-type': 'lvm',
             'overwrite': True
