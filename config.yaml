@@ -6,15 +6,15 @@ options:
       Repository from which to install LXD.  May be one of the following:
       distro (default), ppa:somecustom/ppa, a deb url sources entry,
       or a supported release pocket
-  block-device:
+  block-devices:
     type: string
     default:
     description: |
-       Device to be used to back LXD storage. May be an valid block
-       device or a path and size to a local file (/path/to/file.img|$sizeG),
-       which will be created and used as a loopback device (for testing only).
+       A space-separated list of devices to use to back the LXD storage. Items
+       in this list should be valid block device paths. Entries that are not
+       found will be ignored.
        .
-       This will be use to store lxd containers.
+       Currently, only the the first block device in the list will be considered.
   overwrite:
     default: False
     type: boolean

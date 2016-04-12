@@ -9,7 +9,7 @@ The lxd charm can be used in-conjunction with any principle charm to setup and e
     juju deploy cs:~openstack-charmers-next/wily/nova-compute
     juju set nova-compute virt-type=lxd
     juju deploy cs:~openstack-charmers-next/wily/lxd
-    juju set lxd block-device=/dev/sdb storage-type=lvm
+    juju set lxd block-devices=/dev/sdb storage-type=lvm
     juju add-relation lxd nova-compute
 
 At this point in time, LXD is only supported on Ubuntu 15.10 or above, in-conjunction with OpenStack Liberty (provided as part of Ubuntu 15.10).

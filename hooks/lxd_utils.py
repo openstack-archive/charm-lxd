@@ -143,6 +143,15 @@ def configure_lxd_source(user='ubuntu'):
     service_start('lxd')
 
 
+def get_block_devices():
+    """Returns a list of block devices provided by the config."""
+    lxd_block_devices = config('block-devices')
+    if lxd_block_devices is None:
+        return []
+    else:
+        return lxd_block_devices.split(' ')
+
+
 def configure_lxd_block():
     '''Configure a block device for use by LXD for containers'''
     log('Configuring LXD container storage')
@@ -150,10 +159,13 @@ def configure_lxd_block():
         log('/var/lib/lxd already configured, skipping')
         return
 
-    lxd_block_device = config('block-device')
-    if not lxd_block_device:
-        log('block device is not provided - skipping')
+    lxd_block_devices = get_block_devices()
+    if len(lxd_block_devices) < 1:
+        log('block devices not provided - skipping')
         return
+    if len(lxd_block_devices) > 1:
+        raise NotImplementedError('Multiple block devices are not supported.')
+    lxd_block_device = lxd_block_devices[0]
 
     dev = None
     if lxd_block_device.startswith('/dev/'):
