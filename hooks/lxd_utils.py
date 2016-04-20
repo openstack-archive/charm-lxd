@@ -232,6 +232,10 @@ def configure_lxd_block():
     elif config('storage-type') == 'zfs':
         status_set('maintenance',
                    'Configuring zfs container storage')
+        if dev in check_zpool(dev):
+            log('Device already exists for zfs. Skipping')
+            return
+
         if config('overwrite'):
             cmd = ['zpool', 'create', '-f', 'lxd', dev]
         else:
@@ -447,3 +451,16 @@ def assess_status():
         status_set('active', 'Unit is ready')
     else:
         status_set('blocked', 'LXD is not running')
+
+
+def check_zpool(dev):
+    '''Determine if the zpool exists'''
+    out = check_output(['zpool', 'status', dev]).splitlines()
+
+    for l in out:
+        l = l.decode('UTF-8')
+        if l.strip().startswith('state'):
+            if l.split()[1] in ['ONLINE']:
+                return True
+
+    return False
