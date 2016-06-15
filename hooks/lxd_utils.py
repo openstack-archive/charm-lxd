@@ -54,6 +54,7 @@ BASE_PACKAGES = [
     'thin-provisioning-tools',
     'criu',
     'zfsutils-linux'
+    'linux-image-%s' % os.uname()[2]
 ]
 LXD_PACKAGES = ['lxd', 'lxd-client']
 LXD_SOURCE_PACKAGES = [
