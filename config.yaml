@@ -40,4 +40,9 @@ options:
     type: boolean
     default: False
     description: Use LXD source from github.
-
+  use-criu:
+    type: boolean
+    default: False
+    description: |
+      Enable live-migration in nova-lxd. If enabled, the charm
+      will enable live-migration in the /etc/nova/nova-compute.conf.

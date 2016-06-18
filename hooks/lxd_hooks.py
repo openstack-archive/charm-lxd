@@ -28,6 +28,7 @@ from lxd_utils import (
     install_lxd_source,
     configure_lxd_source,
     configure_lxd_block,
+    configure_lxd_live_migrate,
     lxd_trust_password,
     configure_lxd_remote,
     configure_lxd_host,
@@ -62,6 +63,7 @@ def config_changed():
         umount(e_mountpoint)
     configure_lxd_block()
     configure_lxd_host()
+    configure_lxd_live_migrate()
 
 
 @hooks.hook('lxd-migration-relation-joined')
