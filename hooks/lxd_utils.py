@@ -402,6 +402,14 @@ def configure_lxd_host():
                 modules.write('overlay')
 
 
+def configure_lxd_live_migrate():
+    if config('enable-live-migration'):
+        log('Configuring Live Migration for nova-lxd', level=INFO)
+        templates_dir = 'templates/openstack'
+        render('nova-compute.conf', '/etc/nova/nova-compute.conf',
+               {}, templates_dir=templates_dir)
+
+
 def clean_storage(block_device):
     '''Ensures a block device is clean.  That is:
         - unmounted

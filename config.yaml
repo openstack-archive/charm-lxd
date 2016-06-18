@@ -41,3 +41,7 @@ options:
     default: False
     description: Use LXD source from github.
 
+  enable-live-migration:
+    type: boolean
+    default: False
+    description: Confiugre nova-lxd for live-migration
