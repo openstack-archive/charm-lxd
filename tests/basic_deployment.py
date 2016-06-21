@@ -301,7 +301,6 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         expected = [
             'core.https_address: \'[::]\'',
             'core.trust_password: true',
-            'storage.lvm_thinpool_name: LXDPool',
             'storage.lvm_vg_name: lxd_vg',
         ]
 
