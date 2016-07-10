@@ -265,7 +265,7 @@ def configure_lxd_block():
 
 
 def create_and_import_busybox_image():
-    """Create a busybox image for lxd.
+    """Create a busybox image for LXD.
 
     This creates a busybox image without reaching out to
     the network.
