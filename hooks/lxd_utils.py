@@ -18,7 +18,7 @@ import json
 import pwd
 import os
 import shutil
-from subprocess import call, check_call, check_output, CalledProcessError
+from subprocess import call, check_call, check_output, CalledProcessError, Popen
 import subprocess
 import tarfile
 import tempfile
@@ -410,12 +410,17 @@ def configure_lxd_host():
                'core.https_address', '[::]']
         check_call(cmd)
 
+        # configure live migration
         if ubuntu_release == 'xenial':
             apt_install('linux-image-extra-%s' % os.uname()[2],
                         fatal=True)
 
         if ubuntu_release >= 'xenial':
             modprobe('netlink_diag')
+
+        if config('block-storage-type:') == 'ext4':
+            subprocess.Popen("echo N | sudo tee /sys/module/ext4/parameters/userns_mounts", shell=True)
+
     elif ubuntu_release == "vivid":
         log('Vivid deployment - loading overlay kernel module', level=INFO)
         cmd = ['modprobe', 'overlay']

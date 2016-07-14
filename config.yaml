@@ -26,6 +26,11 @@ options:
     default: btrfs
     description: |
        LXD container storage type: btrfs, zfs, or lvm
+  block-storage-type:
+    type: string
+    default: ext4
+    description: |
+       Enable EXT4 user namespace support for block storage.
   ephemeral-unmount:
     type: string
     default:
