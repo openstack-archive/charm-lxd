@@ -97,6 +97,7 @@ LXD_GIT = 'github.com/lxc/lxd'
 DEFAULT_LOOPBACK_SIZE = '10G'
 PW_LENGTH = 16
 ZFS_POOL_NAME = 'lxd'
+EXT4_USERNS_MOUNTS = "/sys/module/ext4/parameters/userns_mounts"
 
 
 def install_lxd():
@@ -416,12 +417,19 @@ def configure_lxd_host():
                'core.https_address', '[::]']
         check_call(cmd)
 
+        # configure live migration
         if ubuntu_release == 'xenial':
             apt_install('linux-image-extra-%s' % os.uname()[2],
                         fatal=True)
 
         if ubuntu_release >= 'xenial':
             modprobe('netlink_diag')
+
+        with open(EXT4_USERNS_MOUNTS, 'w') as userns_mounts:
+            userns_mounts.write(
+                'Y\n' if config('enable-ext4-userns') else 'N\n'
+            )
+
     elif ubuntu_release == "vivid":
         log('Vivid deployment - loading overlay kernel module', level=INFO)
         cmd = ['modprobe', 'overlay']
