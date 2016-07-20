@@ -18,8 +18,7 @@ sync: bin/charm_helpers_sync.py
 
 functional_test:
 	@echo Starting Amulet tests...
-	@tests/setup/00-setup
-	@juju test -v -p AMULET_HTTP_PROXY,AMULET_OS_VIP --timeout 2700
+	tox -e func27
 
 publish: lint unit_test
 	bzr push lp:charms/lxd
