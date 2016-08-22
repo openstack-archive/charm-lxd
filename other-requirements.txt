@@ -1,3 +1,0 @@
-# NOTE: required for charm-tools->launchpadlib->keyring->secretstorage
-libdbus-1-dev
-libdbus-glib-1-dev
