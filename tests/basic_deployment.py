@@ -55,7 +55,7 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         self._deploy()
 
         u.log.info('Waiting on extended status checks...')
-        exclude_services = ['mysql']
+        exclude_services = []
         self._auto_wait_for_status(exclude_services=exclude_services)
 
         self._initialize_tests()
@@ -69,7 +69,7 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
            """
         this_service = {'name': 'lxd'}
 
-        other_services = [{'name': 'mysql'},
+        other_services = [{'name': 'percona-cluster'},
                           {'name': 'nova-compute', 'units': 2},
                           {'name': 'rabbitmq-server'},
                           {'name': 'nova-cloud-controller'},
@@ -84,18 +84,18 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         relations = {
             'lxd:lxd': 'nova-compute:lxd',
             'nova-compute:image-service': 'glance:image-service',
-            'nova-compute:shared-db': 'mysql:shared-db',
+            'nova-compute:shared-db': 'percona-cluster:shared-db',
             'nova-compute:amqp': 'rabbitmq-server:amqp',
-            'nova-cloud-controller:shared-db': 'mysql:shared-db',
+            'nova-cloud-controller:shared-db': 'percona-cluster:shared-db',
             'nova-cloud-controller:identity-service': 'keystone:'
                                                       'identity-service',
             'nova-cloud-controller:amqp': 'rabbitmq-server:amqp',
             'nova-cloud-controller:cloud-compute': 'nova-compute:'
                                                    'cloud-compute',
             'nova-cloud-controller:image-service': 'glance:image-service',
-            'keystone:shared-db': 'mysql:shared-db',
+            'keystone:shared-db': 'percona-cluster:shared-db',
             'glance:identity-service': 'keystone:identity-service',
-            'glance:shared-db': 'mysql:shared-db',
+            'glance:shared-db': 'percona-cluster:shared-db',
             'glance:amqp': 'rabbitmq-server:amqp'
         }
         super(LXDBasicDeployment, self)._add_relations(relations)
@@ -153,7 +153,7 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         self.compute0_sentry = self.d.sentry['nova-compute'][0]
         self.compute1_sentry = self.d.sentry['nova-compute'][1]
 
-        self.mysql_sentry = self.d.sentry['mysql'][0]
+        self.pxc_sentry = self.d.sentry['percona-cluster'][0]
         self.keystone_sentry = self.d.sentry['keystone'][0]
         self.rabbitmq_sentry = self.d.sentry['rabbitmq-server'][0]
         self.nova_cc_sentry = self.d.sentry['nova-cloud-controller'][0]
@@ -164,11 +164,14 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         u.log.debug('openstack release str: {}'.format(
             self._get_openstack_release_string()))
 
+        keystone_ip = self.keystone_sentry.info['public-address']
+
         # Authenticate admin with keystone
         self.keystone = u.authenticate_keystone_admin(self.keystone_sentry,
                                                       user='admin',
                                                       password='openstack',
-                                                      tenant='admin')
+                                                      tenant='admin',
+                                                      keystone_ip=keystone_ip)
 
         # Authenticate admin with glance endpoint
         self.glance = u.authenticate_glance_admin(self.keystone)
@@ -212,7 +215,7 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
             self.compute1_sentry: ['nova-compute',
                                    'nova-network',
                                    'nova-api'],
-            self.mysql_sentry: ['mysql'],
+            self.pxc_sentry: ['mysql'],
             self.rabbitmq_sentry: ['rabbitmq-server'],
             self.nova_cc_sentry: ['nova-api-os-compute',
                                   'nova-conductor',
