@@ -1,0 +1,10 @@
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Code-Review+1: Chuck Short <chuck.short@canonical.com>
+Code-Review+2: James Page <james.page@canonical.com>
+Workflow+1: James Page <james.page@canonical.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 10 Oct 2016 08:57:54 +0000
+Reviewed-on: https://review.openstack.org/342359
+Project: openstack/charm-lxd
+Branch: refs/heads/master
