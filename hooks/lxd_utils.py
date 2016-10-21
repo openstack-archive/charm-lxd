@@ -425,11 +425,14 @@ def configure_lxd_host():
         if ubuntu_release >= 'xenial':
             modprobe('netlink_diag')
 
-        if os.path.exists(EXT4_USERNS_MOUNTS):
-            with open(EXT4_USERNS_MOUNTS, 'w') as userns_mounts:
-                userns_mounts.write(
-                    'Y\n' if config('enable-ext4-userns') else 'N\n'
-                )
+        # /sys is read-only when using a container
+        container_check = check_output(['systemd-detect-virt'])
+        if container_check != 'lxc':
+            if os.path.exists(EXT4_USERNS_MOUNTS):
+                with open(EXT4_USERNS_MOUNTS, 'w') as userns_mounts:
+                    userns_mounts.write(
+                        'Y\n' if config('enable-ext4-userns') else 'N\n'
+                    )
 
     elif ubuntu_release == "vivid":
         log('Vivid deployment - loading overlay kernel module', level=INFO)
