@@ -1,0 +1,8 @@
+Code-Review+2: James Page <james.page@canonical.com>
+Workflow+1: James Page <james.page@canonical.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 24 Oct 2016 19:36:51 +0000
+Reviewed-on: https://review.openstack.org/390393
+Project: openstack/charm-lxd
+Branch: refs/heads/master
