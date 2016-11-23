@@ -109,7 +109,7 @@ UBUNTU_OPENSTACK_RELEASE = OrderedDict([
     ('wily', 'liberty'),
     ('xenial', 'mitaka'),
     ('yakkety', 'newton'),
-    ('zebra', 'ocata'),  # TODO: upload with real Z name
+    ('zesty', 'ocata'),
 ])
 
 
@@ -152,6 +152,8 @@ SWIFT_CODENAMES = OrderedDict([
         ['2.5.0', '2.6.0', '2.7.0']),
     ('newton',
         ['2.8.0', '2.9.0', '2.10.0']),
+    ('ocata',
+        ['2.11.0']),
 ])
 
 # >= Liberty version->codename mapping
@@ -547,6 +549,9 @@ def configure_installation_source(rel):
             'newton': 'xenial-updates/newton',
             'newton/updates': 'xenial-updates/newton',
             'newton/proposed': 'xenial-proposed/newton',
+            'zesty': 'zesty-updates/ocata',
+            'zesty/updates': 'xenial-updates/ocata',
+            'zesty/proposed': 'xenial-proposed/ocata',
         }
 
         try:
@@ -679,6 +684,7 @@ def clean_storage(block_device):
         remove_lvm_physical_volume(block_device)
     else:
         zap_disk(block_device)
+
 
 is_ip = ip.is_ip
 ns_query = ip.ns_query
