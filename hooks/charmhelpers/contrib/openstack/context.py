@@ -344,6 +344,10 @@ class IdentityServiceContext(OSContextGenerator):
                              'auth_protocol': auth_protocol,
                              'api_version': api_version})
 
+                if float(api_version) > 2:
+                    ctxt.update({'admin_domain_name':
+                                 rdata.get('service_domain')})
+
                 if self.context_complete(ctxt):
                     # NOTE(jamespage) this is required for >= icehouse
                     # so a missing value just indicates keystone needs
