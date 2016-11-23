@@ -203,11 +203,20 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
                                          password='password',
                                          tenant=self.demo_tenant)
 
+        self.nova_admin = u.authenticate_nova_user(self.keystone,
+                                                   user='admin',
+                                                   password='openstack',
+                                                   tenant='admin')
+
+        u.create_flavor(nova=self.nova_admin,
+                        name='m1.tiny', ram=512, vcpus=1, disk=1)
+
         # Authenticate demo user with nova-api
         self.nova_demo = u.authenticate_nova_user(self.keystone,
                                                   user=self.demo_user,
                                                   password='password',
                                                   tenant=self.demo_tenant)
+
 
     def test_100_services(self):
         """Verify the expected services are running on the corresponding
