@@ -1,0 +1,9 @@
+Verified-1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Code-Review+2: David Ames <david.ames@canonical.com>
+Workflow+1: David Ames <david.ames@canonical.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Fri, 02 Dec 2016 19:07:16 +0000
+Reviewed-on: https://review.openstack.org/401436
+Project: openstack/charm-lxd
+Branch: refs/heads/master
