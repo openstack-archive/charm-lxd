@@ -204,3 +204,22 @@ class TestLXDUtilsAssessStatus(testing.CharmTestCase):
         self.get_upstream_version.assert_called_with(
             lxd_utils.VERSION_PACKAGE
         )
+
+
+class TestConfigureUIDGID(testing.CharmTestCase):
+    """Tests for hooks.lxd_utils.configure_uid_mapping."""
+
+    TO_PATCH = [
+        'check_call'
+    ]
+
+    def setUp(self):
+        super(TestConfigureUIDGID, self).setUp(
+            lxd_utils, self.TO_PATCH)
+
+    def test_configure_uid_mapping(self):
+        lxd_utils.configure_uid_mapping()
+        self.check_call.assert_called_with(['usermod',
+                                            '-v', '100000-327779999',
+                                            '-w', '100000-327779999',
+                                            'root'])

@@ -432,6 +432,7 @@ def configure_lxd_host():
                     'Y\n' if config('enable-ext4-userns') else 'N\n'
                 )
 
+        configure_uid_mapping()
     elif ubuntu_release == "vivid":
         log('Vivid deployment - loading overlay kernel module', level=INFO)
         cmd = ['modprobe', 'overlay']
@@ -510,3 +511,15 @@ def zpools():
         return pools
     except CalledProcessError:
         return []
+
+
+ROOT_BASE = 100000
+ROOT_COUNT = 327679999  # 5000 containers
+ROOT_USER = 'root'
+
+
+def configure_uid_mapping():
+    '''Configure /etc/{subuid,subgid} mapping for LXD use'''
+    s_range = '{}-{}'.format(ROOT_BASE, ROOT_BASE+ROOT_COUNT)
+    cmd = ['usermod', '-v', s_range, '-w', s_range, ROOT_USER]
+    check_call(cmd)
