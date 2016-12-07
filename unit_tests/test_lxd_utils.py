@@ -204,3 +204,37 @@ class TestLXDUtilsAssessStatus(testing.CharmTestCase):
         self.get_upstream_version.assert_called_with(
             lxd_utils.VERSION_PACKAGE
         )
+
+
+class TestConfigureUIDGID(testing.CharmTestCase):
+    """Tests for hooks.lxd_utils.configure_uid_mapping."""
+
+    TO_PATCH = [
+        'check_call',
+        'service_restart'
+    ]
+
+    UIDMAP = [
+        'lxd:100000:65536',
+        'root:100000:65536',
+        'ubuntu:165536:65536',
+    ]
+
+    def setUp(self):
+        super(TestConfigureUIDGID, self).setUp(
+            lxd_utils, self.TO_PATCH)
+
+    def test_configure_uid_mapping(self):
+        with testing.patch_open() as (_open, _file):
+            _file.readlines.return_value = self.UIDMAP
+            lxd_utils.configure_uid_mapping()
+            _open.assert_has_calls([
+                mock.call('/etc/subuid', 'r+'),
+                mock.call('/etc/subgid', 'r+')
+            ])
+            _file.write.assert_has_calls([
+                mock.call('lxd:100000:65536\n'),
+                mock.call('root:100000:327680000\n'),
+                mock.call('ubuntu:165536:65536\n')
+            ])
+        self.service_restart.assert_called_with('lxd')
