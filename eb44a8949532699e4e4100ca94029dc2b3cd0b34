@@ -1,0 +1,9 @@
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Code-Review+2: Liam Young <liam.young@canonical.com>
+Workflow+1: Liam Young <liam.young@canonical.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 13 Dec 2016 11:23:53 +0000
+Reviewed-on: https://review.openstack.org/408243
+Project: openstack/charm-lxd
+Branch: refs/heads/stable/16.10
