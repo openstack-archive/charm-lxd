@@ -190,7 +190,8 @@ def configure_lxd_block():
         log('block devices not provided - skipping')
         return
     if len(lxd_block_devices) > 1:
-        raise NotImplementedError('Multiple block devices are not supported.')
+        log("More than one block device is not supported yet, only" \
+            " using the first")
     lxd_block_device = lxd_block_devices[0]
 
     dev = None
