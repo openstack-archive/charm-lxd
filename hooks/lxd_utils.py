@@ -47,6 +47,7 @@ from charmhelpers.core.host import (
     pwgen,
     lsb_release,
     is_container,
+    CompareHostReleases,
 )
 from charmhelpers.contrib.storage.linux.utils import (
     is_block_device,
@@ -410,7 +411,8 @@ def configure_lxd_remote(settings, user='root'):
 @retry_on_exception(5, base_delay=2, exc_type=CalledProcessError)
 def configure_lxd_host():
     ubuntu_release = lsb_release()['DISTRIB_CODENAME'].lower()
-    if ubuntu_release > "vivid":
+    cmp_ubuntu_release = CompareHostReleases(ubuntu_release)
+    if cmp_ubuntu_release > "vivid":
         log('>= Wily deployment - configuring LXD trust password and address',
             level=INFO)
         cmd = ['lxc', 'config', 'set',
@@ -425,11 +427,11 @@ def configure_lxd_host():
             #                  within a container on an all-in-one install
 
             # Configure live migration
-            if ubuntu_release == 'xenial':
+            if cmp_ubuntu_release == 'xenial':
                 apt_install('linux-image-extra-%s' % os.uname()[2],
                             fatal=True)
 
-            if ubuntu_release >= 'xenial':
+            if cmp_ubuntu_release >= 'xenial':
                 modprobe('netlink_diag')
 
             # Enable/disable use of ext4 within nova-lxd containers
@@ -440,7 +442,7 @@ def configure_lxd_host():
                     )
 
         configure_uid_mapping()
-    elif ubuntu_release == "vivid":
+    elif cmp_ubuntu_release == "vivid":
         log('Vivid deployment - loading overlay kernel module', level=INFO)
         cmd = ['modprobe', 'overlay']
         check_call(cmd)
