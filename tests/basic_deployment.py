@@ -1,4 +1,4 @@
-# Copyright 2016 Canonical Ltd
+ # Copyright 2016 Canonical Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 
 import amulet
 import time
+from distutils.version import LooseVersion
 
 from charmhelpers.contrib.openstack.amulet.deployment import (
     OpenStackAmuletDeployment
@@ -316,31 +317,6 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
 
         u.log.debug('Ok')
 
-    def test_401_check_logical_volumes(self):
-        """Inspect and validate lvs on all lxd units."""
-        u.log.debug('Checking logical volumes on lxd units...')
-
-        cmd = 'sudo lvs'
-        expected = ['LXDPool']
-
-        invalid = []
-        for sentry_unit in self.d.sentry['lxd']:
-            host = sentry_unit.info['public-address']
-            unit_name = sentry_unit.info['unit_name']
-
-            output, _ = u.run_cmd_unit(sentry_unit, cmd)
-            for expected_content in expected:
-                if expected_content not in output:
-                    invalid.append('{} {} lvs does not contain '
-                                   '{}'.format(unit_name, host,
-                                               expected_content))
-
-            if invalid:
-                u.log.error('Logical volume check failed.')
-                amulet.raise_status(amulet.FAIL, msg='; '.join(invalid))
-
-        u.log.debug('Ok')
-
     def test_402_lxc_config_validate(self):
         """Inspect and validate lxc running config on all lxd units."""
         u.log.debug('Checking lxc config on lxd units...')
@@ -351,7 +327,6 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
             'core.trust_password: true',
             'storage.lvm_vg_name: lxd_vg',
         ]
-
         invalid = []
         for sentry_unit in self.d.sentry['lxd']:
             host = sentry_unit.info['public-address']
@@ -359,6 +334,10 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
 
             output, _ = u.run_cmd_unit(sentry_unit, cmd)
             for expected_content in expected:
+                version, _ = u.run_cmd_unit(sentry_unit, 'sudo lxc --version')
+                if LooseVersion(version) >= LooseVersion("2.9"):
+                    if expected_content == 'storage.lvm_vg_name: lxd_vg':
+                        continue
                 if expected_content not in output:
                     invalid.append('{} {} lxc config does not contain '
                                    '{}'.format(unit_name, host,
