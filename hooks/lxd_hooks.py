@@ -46,6 +46,8 @@ from lxd_utils import (
     configure_lxd_remote,
     configure_lxd_host,
     assess_status,
+    has_storage,
+    LXD_POOL,
 )
 
 from charmhelpers.fetch import (
@@ -84,6 +86,8 @@ def lxd_relation_joined(rid=None):
     settings['password'] = lxd_trust_password()
     settings['hostname'] = gethostname()
     settings['address'] = unit_get('private-address')
+    if has_storage():
+        settings['pool'] = LXD_POOL
     relation_set(relation_id=rid,
                  relation_settings=settings)
 
