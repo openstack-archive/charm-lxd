@@ -136,7 +136,7 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         lxd_config = {
             'block-devices': '/dev/vdb',
             'ephemeral-unmount': '/mnt',
-            'storage-type': 'lvm',
+            'storage-type': 'zfs',
             'overwrite': True
         }
 
@@ -244,16 +244,7 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         u.log.debug('Checking system services on units...')
 
         services = {
-            self.lxd0_sentry: ['lxd'],
-            self.compute0_sentry: ['nova-compute'],
-            self.compute1_sentry: ['nova-compute'],
-            self.rabbitmq_sentry: ['rabbitmq-server'],
-            self.nova_cc_sentry: ['nova-api-os-compute',
-                                  'nova-conductor',
-                                  'nova-cert',
-                                  'nova-scheduler'],
-            self.glance_sentry: ['glance-registry',
-                                 'glance-api']
+            self.lxd0_sentry: ['lxd']
         }
         # XXX: rockstar (6 Mar 2016) - See related XXX comment
         # above.
@@ -291,56 +282,6 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
 
     # TODO:  Add bi-directional lxd service relation introspection
 
-    def test_400_check_logical_volume_groups(self):
-        """Inspect and validate vgs on all lxd units."""
-        u.log.debug('Checking logical volume groups on lxd units...')
-
-        cmd = 'sudo vgs'
-        expected = ['lxd_vg']
-
-        invalid = []
-        for sentry_unit in self.d.sentry['lxd']:
-            host = sentry_unit.info['public-address']
-            unit_name = sentry_unit.info['unit_name']
-
-            output, _ = u.run_cmd_unit(sentry_unit, cmd)
-            for expected_content in expected:
-                if expected_content not in output:
-                    invalid.append('{} {} vgs does not contain '
-                                   '{}'.format(unit_name, host,
-                                               expected_content))
-
-            if invalid:
-                u.log.error('Logical volume group check failed.')
-                amulet.raise_status(amulet.FAIL, msg='; '.join(invalid))
-
-        u.log.debug('Ok')
-
-    def test_401_check_logical_volumes(self):
-        """Inspect and validate lvs on all lxd units."""
-        u.log.debug('Checking logical volumes on lxd units...')
-
-        cmd = 'sudo lvs'
-        expected = ['LXDPool']
-
-        invalid = []
-        for sentry_unit in self.d.sentry['lxd']:
-            host = sentry_unit.info['public-address']
-            unit_name = sentry_unit.info['unit_name']
-
-            output, _ = u.run_cmd_unit(sentry_unit, cmd)
-            for expected_content in expected:
-                if expected_content not in output:
-                    invalid.append('{} {} lvs does not contain '
-                                   '{}'.format(unit_name, host,
-                                               expected_content))
-
-            if invalid:
-                u.log.error('Logical volume check failed.')
-                amulet.raise_status(amulet.FAIL, msg='; '.join(invalid))
-
-        u.log.debug('Ok')
-
     def test_402_lxc_config_validate(self):
         """Inspect and validate lxc running config on all lxd units."""
         u.log.debug('Checking lxc config on lxd units...')
@@ -349,9 +290,7 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         expected = [
             'core.https_address: \'[::]\'',
             'core.trust_password: true',
-            'storage.lvm_vg_name: lxd_vg',
         ]
-
         invalid = []
         for sentry_unit in self.d.sentry['lxd']:
             host = sentry_unit.info['public-address']
@@ -359,6 +298,7 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
 
             output, _ = u.run_cmd_unit(sentry_unit, cmd)
             for expected_content in expected:
+                version, _ = u.run_cmd_unit(sentry_unit, 'sudo lxc --version')
                 if expected_content not in output:
                     invalid.append('{} {} lxc config does not contain '
                                    '{}'.format(unit_name, host,
