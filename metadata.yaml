@@ -10,6 +10,7 @@ series:
   - xenial
   - zesty
   - yakkety
+  - zesty
 subordinate: true
 peers:
   lxd-migration:

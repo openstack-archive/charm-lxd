@@ -260,6 +260,12 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         if self.lxd1_sentry is not None:
             services[self.lxd1_sentry] = ['lxd']
 
+        if self._get_openstack_release() >= self.xenial_ocata:
+            services[self.compute0_sentry].remove('nova-network')
+            services[self.compute0_sentry].remove('nova-api')
+            services[self.compute1_sentry].remove('nova-network')
+            services[self.compute1_sentry].remove('nova-api')
+
         ret = u.validate_services_by_name(services)
         if ret:
             amulet.raise_status(amulet.FAIL, msg=ret)
@@ -316,31 +322,6 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
 
         u.log.debug('Ok')
 
-    def test_401_check_logical_volumes(self):
-        """Inspect and validate lvs on all lxd units."""
-        u.log.debug('Checking logical volumes on lxd units...')
-
-        cmd = 'sudo lvs'
-        expected = ['LXDPool']
-
-        invalid = []
-        for sentry_unit in self.d.sentry['lxd']:
-            host = sentry_unit.info['public-address']
-            unit_name = sentry_unit.info['unit_name']
-
-            output, _ = u.run_cmd_unit(sentry_unit, cmd)
-            for expected_content in expected:
-                if expected_content not in output:
-                    invalid.append('{} {} lvs does not contain '
-                                   '{}'.format(unit_name, host,
-                                               expected_content))
-
-            if invalid:
-                u.log.error('Logical volume check failed.')
-                amulet.raise_status(amulet.FAIL, msg='; '.join(invalid))
-
-        u.log.debug('Ok')
-
     def test_402_lxc_config_validate(self):
         """Inspect and validate lxc running config on all lxd units."""
         u.log.debug('Checking lxc config on lxd units...')
@@ -351,7 +332,9 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
             'core.trust_password: true',
             'storage.lvm_vg_name: lxd_vg',
         ]
-
+        if u.get_ubuntu_release_from_sentry(
+                self.d.sentry['lxd'][0]) >= "zesty":
+            expected.remove('storage.lvm_vg_name: lxd_vg')
         invalid = []
         for sentry_unit in self.d.sentry['lxd']:
             host = sentry_unit.info['public-address']
