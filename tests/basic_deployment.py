@@ -260,6 +260,12 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         if self.lxd1_sentry is not None:
             services[self.lxd1_sentry] = ['lxd']
 
+        if self._get_openstack_release() >= self.xenial_ocata:
+            services[self.compute0_sentry].remove('nova-network')
+            services[self.compute0_sentry].remove('nova-api')
+            services[self.compute1_sentry].remove('nova-network')
+            services[self.compute1_sentry].remove('nova-api')
+
         ret = u.validate_services_by_name(services)
         if ret:
             amulet.raise_status(amulet.FAIL, msg=ret)
@@ -318,6 +324,8 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
 
     def test_401_check_logical_volumes(self):
         """Inspect and validate lvs on all lxd units."""
+        if self._get_openstack_release() >= self.xenial_ocata:
+            return
         u.log.debug('Checking logical volumes on lxd units...')
 
         cmd = 'sudo lvs'
@@ -351,7 +359,8 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
             'core.trust_password: true',
             'storage.lvm_vg_name: lxd_vg',
         ]
-
+        if self._get_openstack_release() >= self.xenial_ocata:
+            expected.remove('storage.lvm_vg_name: lxd_vg')
         invalid = []
         for sentry_unit in self.d.sentry['lxd']:
             host = sentry_unit.info['public-address']
