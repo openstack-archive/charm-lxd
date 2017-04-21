@@ -222,8 +222,21 @@ def configure_lxd_block():
         mkdir('/var/lib/lxd')
 
     if config('storage-type') == 'btrfs':
-        status_set('maintenance',
-                   'Configuring btrfs container storage')
+        config_btrfs(dev)
+    elif config('storage-type') == 'lvm':
+        config_lvm(dev)
+    elif config('storage-type') == 'zfs':
+        config_zfs(dev)
+
+
+def config_btrfs(dev):
+    status_set('maintenance',
+               'Configuring btrfs container storage')
+    if has_storage():
+        cmd = ['lxc', 'storage', 'create', 'lxd_btrfs', 'btrfs',
+               'source={}'.format(dev)]
+        check_call(cmd)
+    else:
         lxd_stop()
         cmd = ['mkfs.btrfs', '-f', dev]
         check_call(cmd)
@@ -235,15 +248,20 @@ def configure_lxd_block():
         cmd = ['btrfs', 'quota', 'enable', '/var/lib/lxd']
         check_call(cmd)
         lxd_start()
-    elif config('storage-type') == 'lvm':
-        if (is_lvm_physical_volume(dev) and
-                list_lvm_volume_group(dev) == 'lxd_vg'):
-            log('Device already configured for LVM/LXD, skipping')
-            return
-        status_set('maintenance',
-                   'Configuring LVM container storage')
-        # Enable and startup lvm2-lvmetad to avoid extra output
-        # in lvm2 commands, which confused lxd.
+
+
+def config_lvm(dev):
+    if (is_lvm_physical_volume(dev) and
+            list_lvm_volume_group(dev) == 'lxd_vg'):
+        log('Device already configured for LVM/LXD, skipping')
+        return
+    status_set('maintenance',
+               'Configuring LVM container storage')
+    if has_storage():
+        cmd = ['lxc', 'storage', 'create', 'lxd_vg', 'lvm',
+               'source={}'.format(dev)]
+        check_call(cmd)
+    else:
         cmd = ['systemctl', 'enable', 'lvm2-lvmetad']
         check_call(cmd)
         cmd = ['systemctl', 'start', 'lvm2-lvmetad']
@@ -253,25 +271,40 @@ def configure_lxd_block():
         cmd = ['lxc', 'config', 'set', 'storage.lvm_vg_name', 'lxd_vg']
         check_call(cmd)
 
-        # The LVM thinpool logical volume is lazily created, either on
-        # image import or container creation. This will force LV creation.
-        create_and_import_busybox_image()
-    elif config('storage-type') == 'zfs':
-        status_set('maintenance',
-                   'Configuring zfs container storage')
-        if ZFS_POOL_NAME in zpools():
-            log('ZFS pool already exist; skipping zfs configuration')
-            return
+    # The LVM thinpool logical volume is lazily created, either on
+    # image import or container creation. This will force LV creation.
+    create_and_import_busybox_image()
 
-        if config('overwrite'):
-            cmd = ['zpool', 'create', '-f', ZFS_POOL_NAME, dev]
-        else:
-            cmd = ['zpool', 'create', ZFS_POOL_NAME, dev]
-        check_call(cmd)
 
+def config_zfs(dev):
+    status_set('maintenance',
+               'Configuring zfs container storage')
+    if ZFS_POOL_NAME in zpools():
+        log('ZFS pool already exist; skipping zfs configuration')
+        return
+
+    if config('overwrite'):
+        cmd = ['zpool', 'create', '-f', ZFS_POOL_NAME, dev]
+    else:
+        cmd = ['zpool', 'create', ZFS_POOL_NAME, dev]
+    check_call(cmd)
+
+    if has_storage():
+        cmd = ["lxc", "storage", "create", ZFS_POOL_NAME, "zfs",
+               "source={}".format(ZFS_POOL_NAME)]
+    else:
         cmd = ['lxc', 'config', 'set', 'storage.zfs_pool_name',
                ZFS_POOL_NAME]
-        check_call(cmd)
+
+    check_call(cmd)
+
+
+def has_storage():
+    try:
+        check_call(['lxc', 'storage'])
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
 
 def create_and_import_busybox_image():
