@@ -252,7 +252,15 @@ def configure_lxd_block():
         create_lvm_physical_volume(dev)
         create_lvm_volume_group('lxd_vg', dev)
         cmd = ['lxc', 'config', 'set', 'storage.lvm_vg_name', 'lxd_vg']
-        check_call(cmd)
+        p = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdout, stderr = p.communicate()
+        if p.returncode != 0 and 'deprecated' not in stderr:
+            raise CalledProcessError(p.returncode,
+                                     "{} failed".format(" ".join(cmd)))
 
         # The LVM thinpool logical volume is lazily created, either on
         # image import or container creation. This will force LV creation.
