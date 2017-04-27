@@ -15,9 +15,13 @@ python-ceilometerclient>=1.5.0
 python-cinderclient>=1.4.0
 python-glanceclient>=1.1.0
 python-heatclient>=0.8.0
+python-keystoneclient>=1.7.1
+python-neutronclient>=3.1.0
 python-novaclient>=2.30.1
 python-openstackclient>=1.7.0
 python-swiftclient>=2.6.0
 pika>=0.10.0,<1.0
 distro-info
 # END: Amulet OpenStack Charm Helper Requirements
+# NOTE: workaround for 14.04 pip/tox
+pytz
