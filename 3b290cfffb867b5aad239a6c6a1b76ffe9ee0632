@@ -1,0 +1,10 @@
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Code-Review+1: Jorge Niedbalski R. <jorge.niedbalski@canonical.com>
+Code-Review+2: Billy Olsen <billy.olsen@gmail.com>
+Workflow+1: Billy Olsen <billy.olsen@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 29 Jun 2017 22:42:24 +0000
+Reviewed-on: https://review.openstack.org/471382
+Project: openstack/charm-lxd
+Branch: refs/heads/master
