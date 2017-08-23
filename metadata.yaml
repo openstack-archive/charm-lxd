@@ -9,7 +9,6 @@ tags:
 series:
   - xenial
   - zesty
-  - yakkety
   - zesty
 subordinate: true
 peers:
