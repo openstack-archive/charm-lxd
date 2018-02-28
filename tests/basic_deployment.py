@@ -18,6 +18,11 @@
 import amulet
 import time
 
+import keystoneclient
+from keystoneclient.v3 import client as keystone_client_v3
+import glanceclient
+from novaclient import client as nova_client
+
 from charmhelpers.contrib.openstack.amulet.deployment import (
     OpenStackAmuletDeployment
 )
@@ -196,47 +201,98 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
             self._get_openstack_release_string()))
 
         # Authenticate admin with keystone
-        self.keystone = u.authenticate_keystone_admin(self.keystone_sentry,
-                                                      user='admin',
-                                                      password='openstack',
-                                                      tenant='admin')
+        self.keystone_session, self.keystone = (
+            u.get_default_keystone_session(self.keystone_sentry,
+                                           self._get_openstack_release())
+        )
 
         # Authenticate admin with glance endpoint
-        self.glance = u.authenticate_glance_admin(self.keystone)
+        self.glance = glanceclient.Client('1', session=self.keystone_session)
+
+        self.nova_admin = nova_client.Client(2, session=self.keystone_session)
+
+        u.create_flavor(nova=self.nova_admin,
+                        name='m1.tiny', ram=512, vcpus=1, disk=1)
+
+        keystone_ip = self.keystone_sentry.info['public-address']
 
         # Create a demo tenant/role/user
         self.demo_tenant = 'demoTenant'
         self.demo_role = 'demoRole'
         self.demo_user = 'demoUser'
+        self.demo_project = 'demoProject'
+        self.demo_domain = 'demoDomain'
+
+        if self._get_openstack_release() >= self.xenial_queens:
+            self.create_users_v3()
+            self.demo_user_session, _ = u.get_keystone_session(
+                keystone_ip,
+                self.demo_user,
+                'password',
+                api_version=3,
+                user_domain_name=self.demo_domain,
+                project_domain_name=self.demo_domain,
+                project_name=self.demo_project
+            )
+            self.keystone_demo = keystone_client_v3.Client(
+                session=self.demo_user_session)
+            self.nova_demo = nova_client.Client(
+                2,
+                session=self.demo_user_session)
+        else:
+            self.create_users_v2()
+            # Authenticate demo user with keystone
+            self.keystone_demo = \
+                u.authenticate_keystone_user(
+                    self.keystone, user=self.demo_user,
+                    password='password',
+                    tenant=self.demo_tenant)
+            # Authenticate demo user with nova-api
+            self.nova_demo = u.authenticate_nova_user(self.keystone,
+                                                      user=self.demo_user,
+                                                      password='password',
+                                                      tenant=self.demo_tenant)
+
+    def create_users_v3(self):
+        try:
+            self.keystone.projects.find(name=self.demo_project)
+        except keystoneclient.exceptions.NotFound:
+            domain = self.keystone.domains.create(
+                self.demo_domain,
+                description='Demo Domain',
+                enabled=True
+            )
+            project = self.keystone.projects.create(
+                self.demo_project,
+                domain,
+                description='Demo Project',
+                enabled=True,
+            )
+            user = self.keystone.users.create(
+                self.demo_user,
+                domain=domain.id,
+                project=self.demo_project,
+                password='password',
+                email='demov3@demo.com',
+                description='Demo',
+                enabled=True)
+            role = self.keystone.roles.find(name='Admin')
+            self.keystone.roles.grant(
+                role.id,
+                user=user.id,
+                project=project.id)
+
+    def create_users_v2(self):
         if not u.tenant_exists(self.keystone, self.demo_tenant):
             tenant = self.keystone.tenants.create(tenant_name=self.demo_tenant,
                                                   description='demo tenant',
                                                   enabled=True)
+
             self.keystone.roles.create(name=self.demo_role)
             self.keystone.users.create(name=self.demo_user,
                                        password='password',
                                        tenant_id=tenant.id,
                                        email='demo@demo.com')
-
-        # Authenticate demo user with keystone
-        self.keystone_demo = \
-            u.authenticate_keystone_user(self.keystone, user=self.demo_user,
-                                         password='password',
-                                         tenant=self.demo_tenant)
-
-        self.nova_admin = u.authenticate_nova_user(self.keystone,
-                                                   user='admin',
-                                                   password='openstack',
-                                                   tenant='admin')
-
-        u.create_flavor(nova=self.nova_admin,
-                        name='m1.tiny', ram=512, vcpus=1, disk=1)
-
-        # Authenticate demo user with nova-api
-        self.nova_demo = u.authenticate_nova_user(self.keystone,
-                                                  user=self.demo_user,
-                                                  password='password',
-                                                  tenant=self.demo_tenant)
 
     def test_100_services(self):
         """Verify the expected services are running on the corresponding
