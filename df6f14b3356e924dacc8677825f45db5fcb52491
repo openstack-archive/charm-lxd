@@ -1,0 +1,9 @@
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Code-Review+2: Frode Nordahl <frode.nordahl@gmail.com>
+Workflow+1: Frode Nordahl <frode.nordahl@gmail.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Thu, 01 Mar 2018 15:16:37 +0000
+Reviewed-on: https://review.openstack.org/548545
+Project: openstack/charm-lxd
+Branch: refs/heads/master
