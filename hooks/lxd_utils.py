@@ -17,6 +17,7 @@ import io
 import json
 import pwd
 import os
+import platform
 import shutil
 from subprocess import call, check_call, check_output, CalledProcessError
 import subprocess
@@ -402,6 +403,13 @@ def create_and_import_busybox_image():
 def determine_packages():
     packages = [] + BASE_PACKAGES
     packages = list(set(packages))
+
+    # criu package doesn't exist for arm64/s390x prior to artful
+    machine = platform.machine()
+    if (machine == 'arm64' or machine == 's390x') and
+            CompareHostReleases(lsb_release()['DISTRIB_CODENAME']) < 'artful':
+        packages.remove('criu')
+
     if config('use-source'):
         packages.extend(LXD_SOURCE_PACKAGES)
     else:
