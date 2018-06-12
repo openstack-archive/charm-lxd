@@ -1,0 +1,8 @@
+Code-Review+2: Andrew McLeod <andrew.mcleod@canonical.com>
+Workflow+1: Andrew McLeod <andrew.mcleod@canonical.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Tue, 12 Jun 2018 00:05:15 +0000
+Reviewed-on: https://review.openstack.org/574445
+Project: openstack/charm-lxd
+Branch: refs/heads/stable/18.05
