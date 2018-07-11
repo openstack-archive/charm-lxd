@@ -1,0 +1,8 @@
+Code-Review+2: David Ames <david.ames@canonical.com>
+Workflow+1: David Ames <david.ames@canonical.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Wed, 11 Jul 2018 21:51:06 +0000
+Reviewed-on: https://review.openstack.org/581841
+Project: openstack/charm-lxd
+Branch: refs/heads/master
