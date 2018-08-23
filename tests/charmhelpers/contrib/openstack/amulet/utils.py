@@ -24,7 +24,8 @@ import urlparse
 
 import cinderclient.v1.client as cinder_client
 import cinderclient.v2.client as cinder_clientv2
-import glanceclient.v1.client as glance_client
+import glanceclient.v1 as glance_client
+import glanceclient.v2 as glance_clientv2
 import heatclient.v1.client as heat_client
 from keystoneclient.v2_0 import client as keystone_client
 from keystoneauth1.identity import (
@@ -40,6 +41,7 @@ import novaclient
 import pika
 import swiftclient
 
+from charmhelpers.core.decorators import retry_on_exception
 from charmhelpers.contrib.amulet.utils import (
     AmuletUtils
 )
@@ -55,7 +57,7 @@ OPENSTACK_RELEASES_PAIRS = [
     'trusty_mitaka', 'xenial_mitaka', 'xenial_newton',
     'yakkety_newton', 'xenial_ocata', 'zesty_ocata',
     'xenial_pike', 'artful_pike', 'xenial_queens',
-    'bionic_queens']
+    'bionic_queens', 'bionic_rocky', 'cosmic_rocky']
 
 
 class OpenStackAmuletUtils(AmuletUtils):
@@ -423,6 +425,7 @@ class OpenStackAmuletUtils(AmuletUtils):
         self.log.debug('Checking if tenant exists ({})...'.format(tenant))
         return tenant in [t.name for t in keystone.tenants.list()]
 
+    @retry_on_exception(num_retries=5, base_delay=1)
     def keystone_wait_for_propagation(self, sentry_relation_pairs,
                                       api_version):
         """Iterate over list of sentry and relation tuples and verify that
@@ -542,7 +545,7 @@ class OpenStackAmuletUtils(AmuletUtils):
         return ep
 
     def get_default_keystone_session(self, keystone_sentry,
-                                     openstack_release=None):
+                                     openstack_release=None, api_version=2):
         """Return a keystone session object and client object assuming standard
            default settings
 
@@ -557,12 +560,12 @@ class OpenStackAmuletUtils(AmuletUtils):
                eyc
         """
         self.log.debug('Authenticating keystone admin...')
-        api_version = 2
-        client_class = keystone_client.Client
         # 11 => xenial_queens
-        if openstack_release and openstack_release >= 11:
-            api_version = 3
+        if api_version == 3 or (openstack_release and openstack_release >= 11):
             client_class = keystone_client_v3.Client
+            api_version = 3
+        else:
+            client_class = keystone_client.Client
         keystone_ip = keystone_sentry.info['public-address']
         session, auth = self.get_keystone_session(
             keystone_ip,
@@ -621,7 +624,7 @@ class OpenStackAmuletUtils(AmuletUtils):
         ep = keystone.service_catalog.url_for(service_type='image',
                                               interface='adminURL')
         if keystone.session:
-            return glance_client.Client(ep, session=keystone.session)
+            return glance_clientv2.Client("2", session=keystone.session)
         else:
             return glance_client.Client(ep, token=keystone.auth_token)
 
@@ -709,10 +712,19 @@ class OpenStackAmuletUtils(AmuletUtils):
         f.close()
 
         # Create glance image
-        with open(local_path) as f:
-            image = glance.images.create(name=image_name, is_public=True,
-                                         disk_format='qcow2',
-                                         container_format='bare', data=f)
+        if float(glance.version) < 2.0:
+            with open(local_path) as fimage:
+                image = glance.images.create(name=image_name, is_public=True,
+                                             disk_format='qcow2',
+                                             container_format='bare',
+                                             data=fimage)
+        else:
+            image = glance.images.create(
+                name=image_name,
+                disk_format="qcow2",
+                visibility="public",
+                container_format="bare")
+            glance.images.upload(image.id, open(local_path, 'rb'))
 
         # Wait for image to reach active status
         img_id = image.id
@@ -727,9 +739,14 @@ class OpenStackAmuletUtils(AmuletUtils):
         self.log.debug('Validating image attributes...')
         val_img_name = glance.images.get(img_id).name
         val_img_stat = glance.images.get(img_id).status
-        val_img_pub = glance.images.get(img_id).is_public
         val_img_cfmt = glance.images.get(img_id).container_format
         val_img_dfmt = glance.images.get(img_id).disk_format
+
+        if float(glance.version) < 2.0:
+            val_img_pub = glance.images.get(img_id).is_public
+        else:
+            val_img_pub = glance.images.get(img_id).visibility == "public"
+
         msg_attr = ('Image attributes - name:{} public:{} id:{} stat:{} '
                     'container fmt:{} disk fmt:{}'.format(
                         val_img_name, val_img_pub, img_id,
