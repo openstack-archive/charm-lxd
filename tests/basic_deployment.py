@@ -20,27 +20,20 @@ import time
 
 import keystoneclient
 from keystoneclient.v3 import client as keystone_client_v3
-import glanceclient
 from novaclient import client as nova_client
 
 from charmhelpers.contrib.openstack.amulet.deployment import (
     OpenStackAmuletDeployment
 )
 
-# NOTE(beisner):
-#   LXDAmuletUtils inherits and extends OpenStackAmuletUtils, with
-#   the intention of ultimately moving the relevant helpers into
-#   OpenStackAmuletUtils.
-#
-# from charmhelpers.contrib.openstack.amulet.utils import (
-#     OpenStackAmuletUtils,
-from lxd_amulet_utils import (
-    LXDAmuletUtils,
+from charmhelpers.contrib.openstack.amulet.utils import (
+    OpenStackAmuletUtils,
     DEBUG,
 )
 
+# Use DEBUG to turn on debug logging
+u = OpenStackAmuletUtils(DEBUG)
 
-u = LXDAmuletUtils(DEBUG)
 
 LXD_IMAGE_URL = 'http://cloud-images.ubuntu.com/trusty/current/trusty-server-cloudimg-amd64-root.tar.xz'  # noqa
 LXD_IMAGE_NAME = 'trusty-server-cloudimg-amd64-root.tar.xz'
@@ -206,7 +199,7 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
         )
 
         # Authenticate admin with glance endpoint
-        self.glance = glanceclient.Client('1', session=self.keystone_session)
+        self.glance = u.authenticate_glance_admin(self.keystone)
 
         self.nova_admin = nova_client.Client(2, session=self.keystone_session)
 
