@@ -14,12 +14,7 @@ bin/charm_helpers_sync.py:
 
 sync: bin/charm_helpers_sync.py
 	@$(PYTHON) bin/charm_helpers_sync.py -c charm-helpers.yaml
-	@$(PYTHON) bin/charm_helpers_sync.py -c charm-helpers-tests.yaml
 
 functional_test:
 	@echo Starting Amulet tests...
 	tox -e func27
-
-publish: lint unit_test
-	bzr push lp:charms/lxd
-	bzr push lp:charms/trusty/lxd
