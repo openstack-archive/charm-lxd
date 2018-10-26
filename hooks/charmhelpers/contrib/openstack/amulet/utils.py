@@ -20,7 +20,10 @@ import re
 import six
 import time
 import urllib
-import urlparse
+try:
+    from urlparse import urlparse
+except ModuleNotFoundError:
+    from urllib.parse import urlparse
 
 import cinderclient.v1.client as cinder_client
 import cinderclient.v2.client as cinder_clientv2
