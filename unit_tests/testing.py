@@ -40,7 +40,7 @@ def load_config():
 
     if not config:
         logging.error('Could not find config.yaml in any parent directory '
-                      'of %s. ' % file)
+                      'of %s. ' % __file__)
         raise Exception
 
     return yaml.safe_load(open(config).read())['options']
@@ -127,7 +127,7 @@ def patch_open():
 
     Yields the mock for "open" and "file", respectively.'''
     mock_open = MagicMock(spec=open)
-    mock_file = MagicMock(spec=file)
+    mock_file = MagicMock(spec=__file__)
 
     @contextmanager
     def stub_open(*args, **kwargs):
