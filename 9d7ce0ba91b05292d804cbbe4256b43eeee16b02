@@ -1,0 +1,8 @@
+Code-Review+2: Frode Nordahl <frode.nordahl@canonical.com>
+Workflow+1: Frode Nordahl <frode.nordahl@canonical.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Wed, 09 Jan 2019 10:38:30 +0000
+Reviewed-on: https://review.openstack.org/628797
+Project: openstack/charm-lxd
+Branch: refs/heads/master
