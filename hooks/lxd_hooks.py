@@ -37,17 +37,20 @@ from charmhelpers.core.host import (
 )
 
 from lxd_utils import (
-    filesystem_mounted,
-    determine_packages,
-    install_lxd_source,
-    configure_lxd_source,
-    configure_lxd_block,
-    lxd_trust_password,
-    configure_lxd_remote,
-    configure_lxd_host,
     assess_status,
+    configure_lxd_block,
+    configure_lxd_host,
+    configure_lxd_remote,
+    configure_lxd_source,
+    determine_packages,
+    do_snap_installation,
+    extract_snap_channel,
+    filesystem_mounted,
     has_storage,
+    install_lxd_source,
     LXD_POOL,
+    lxd_snap_channel,
+    lxd_trust_password,
 )
 
 from charmhelpers.fetch import (
@@ -68,11 +71,21 @@ hooks = Hooks()
 
 @hooks.hook('install.real')
 def install():
-    status_set('maintenance', 'Installing LXD packages')
-    if config('source'):
+    log("starting the install hook -- python")
+    status_set('maintenance', 'Installing packages')
+    source = config('source') or ""
+    if source and not source.startswith('snap:'):
         add_source(config('source'))
     apt_update(fatal=True)
-    apt_install(determine_packages(), fatal=True)
+    channel = extract_snap_channel(source)
+    log("source: {}, channel={}".format(source, channel))
+    is_snap_install = channel is not None
+    apt_install(determine_packages(snap_install=is_snap_install),
+                fatal=True)
+    log("is_snap_install: {}".format(is_snap_install))
+    if is_snap_install:
+        do_snap_installation(channel)
+        return
     if config('use-source'):
         install_lxd_source()
         configure_lxd_source()
@@ -80,6 +93,11 @@ def install():
 
 @hooks.hook()
 def config_changed():
+    current_channel = lxd_snap_channel()
+    source = config('source') or ""
+    channel = extract_snap_channel(source)
+    if current_channel != channel:
+        do_snap_installation(channel)
     e_mountpoint = config('ephemeral-unmount')
     if e_mountpoint and filesystem_mounted(e_mountpoint):
         umount(e_mountpoint)
