@@ -1,0 +1,10 @@
+Section: misc
+Priority: optional
+Standards-Version: 3.9.2
+
+Package: lxd-dummy
+Version: 1.0
+Maintainer: Alex Kavanagh <alex.kavanagh@canonical.com>
+Provides: lxd
+Architecture: all
+Description: Dummy lxd package so that snap can be installed instead
