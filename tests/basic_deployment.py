@@ -22,6 +22,8 @@ import keystoneclient
 from keystoneclient.v3 import client as keystone_client_v3
 from novaclient import client as nova_client
 
+from charmhelpers.core.host import CompareHostReleases
+
 from charmhelpers.contrib.openstack.amulet.deployment import (
     OpenStackAmuletDeployment
 )
@@ -70,7 +72,9 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
 
         other_services = [
             {'name': 'percona-cluster'},
-            {'name': 'nova-compute', 'units': 2},
+            {'name': 'nova-compute',
+             'units': 2,
+             'location': 'cs:~ajkavanagh/nova-compute-0'},
             {'name': 'rabbitmq-server'},
             {'name': 'nova-cloud-controller'},
             {'name': 'keystone'},
@@ -134,14 +138,14 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
             'block-devices': '/dev/vdb',
             'ephemeral-unmount': '/mnt',
             'storage-type': 'zfs',
-            'overwrite': True
+            'overwrite': True,
         }
 
         nova_config = {
             'enable-live-migration': True,
             'enable-resize': True,
             'migration-auth-type': 'ssh',
-            'virt-type': 'lxd'
+            'virt-type': 'lxd',
         }
 
         keystone_config = {
@@ -291,13 +295,19 @@ class LXDBasicDeployment(OpenStackAmuletDeployment):
            service units."""
         u.log.debug('Checking system services on units...')
 
+        if CompareHostReleases(self.series) >= 'bionic':
+            # Service name for test if snap installed:
+            service_name = 'snap.lxd.daemon'
+        else:
+            service_name = 'lxd'
+
         services = {
-            self.lxd0_sentry: ['lxd']
+            self.lxd0_sentry: [service_name]
         }
         # XXX: rockstar (6 Mar 2016) - See related XXX comment
         # above.
         if self.lxd1_sentry is not None:
-            services[self.lxd1_sentry] = ['lxd']
+            services[self.lxd1_sentry] = [service_name]
 
         ret = u.validate_services_by_name(services)
         if ret:
