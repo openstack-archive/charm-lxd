@@ -1,0 +1,9 @@
+Code-Review+2: Corey Bryant <corey.bryant@canonical.com>
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Workflow+1: Corey Bryant <corey.bryant@canonical.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Mon, 11 Mar 2019 16:05:48 +0000
+Reviewed-on: https://review.openstack.org/624736
+Project: openstack/charm-lxd
+Branch: refs/heads/master
