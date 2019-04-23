@@ -14,6 +14,7 @@
 
 """Tests for hooks.lxd_utils."""
 import mock
+import textwrap
 
 import lxd_utils
 import testing
@@ -238,3 +239,52 @@ class TestConfigureUIDGID(testing.CharmTestCase):
                 mock.call('ubuntu:165536:65536\n')
             ])
         self.service_restart.assert_called_with('lxd')
+
+
+class MyProcessError(Exception):
+    pass
+
+
+class TestHasStorage(testing.CharmTestCase):
+    """Tests for hooks.lxd_utils.has_storage"""
+
+    TO_PATCH = [
+        'check_output',
+    ]
+
+    def setUp(self):
+        super(TestHasStorage, self).setUp(lxd_utils, self.TO_PATCH)
+
+    def test_has_storage_default(self):
+        self.check_output.return_value = b""
+        self.assertTrue(lxd_utils.has_storage())
+
+    @mock.patch('subprocess.CalledProcessError', new=MyProcessError)
+    def test_has_storage_default_error(self):
+        def raise_error(*args, **kwargs):
+            raise MyProcessError()
+
+        self.check_output.side_effect = raise_error
+        self.assertFalse(lxd_utils.has_storage())
+
+    def test_has_storage_by_pool(self):
+        self.check_output.return_value = textwrap.dedent(
+            b"""
+            +---------+-------------+--------+--------------------------------+---------+
+            |  NAME   | DESCRIPTION | DRIVER |             SOURCE             | USED BY |
+            +---------+-------------+--------+--------------------------------+---------+
+            | default |             | btrfs  | /var/lib/lxd/disks/default.img | 1       |
+            +---------+-------------+--------+--------------------------------+---------+
+            """)  # NOQA W501
+        self.assertTrue(lxd_utils.has_storage('default'))
+
+    def test_has_storage_missing_pool(self):
+        self.check_output.return_value = textwrap.dedent(
+            b"""
+            +---------+-------------+--------+--------------------------------+---------+
+            |  NAME   | DESCRIPTION | DRIVER |             SOURCE             | USED BY |
+            +---------+-------------+--------+--------------------------------+---------+
+            | default |             | btrfs  | /var/lib/lxd/disks/default.img | 1       |
+            +---------+-------------+--------+--------------------------------+---------+
+            """)  # NOQA W501
+        self.assertFalse(lxd_utils.has_storage('btrfs'))

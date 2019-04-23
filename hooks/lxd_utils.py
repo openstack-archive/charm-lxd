@@ -188,8 +188,12 @@ def get_block_devices():
 
 def configure_lxd_block():
     '''Configure a block device for use by LXD for containers'''
-    log('Configuring LXD container storage')
-    if filesystem_mounted('/var/lib/lxd'):
+    log('Configuring LXD container storage if not configured')
+    # determine if the lxd block has already been configured
+    if has_storage(LXD_POOL):
+        log("LXD storage pool {} already configured".format(LXD_POOL))
+        return
+    elif filesystem_mounted('/var/lib/lxd'):
         log('/var/lib/lxd already configured, skipping')
         return
 
@@ -308,9 +312,20 @@ def config_zfs(dev):
     check_call(cmd)
 
 
-def has_storage():
+def has_storage(search_for_pool=None):
     try:
-        check_call(['lxc', 'storage', 'list'])
+        pools = (check_output(['lxc', 'storage', 'list'])
+                 .decode('utf-8')
+                 .splitlines())
+        if search_for_pool is not None:
+            for pool in pools:
+                try:
+                    name = pool.split(' ')[1]
+                    if search_for_pool == name:
+                        return True
+                except IndexError:
+                    pass
+            return False
         return True
     except subprocess.CalledProcessError:
         return False
