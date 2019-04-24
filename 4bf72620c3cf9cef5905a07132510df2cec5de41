@@ -1,0 +1,9 @@
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Code-Review+2: Pete Vander Giessen <pete.vandergiessen@canonical.com>
+Workflow+1: Pete Vander Giessen <pete.vandergiessen@canonical.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Wed, 24 Apr 2019 13:20:29 +0000
+Reviewed-on: https://review.opendev.org/655168
+Project: openstack/charm-lxd
+Branch: refs/heads/master
