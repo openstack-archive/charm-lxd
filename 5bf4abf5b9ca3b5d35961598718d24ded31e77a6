@@ -1,0 +1,11 @@
+Code-Review+1: Vieri <15050873171@163.com>
+Code-Review+1: 98k <18552437190@163.com>
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Code-Review+2: Alex Kavanagh (tinwood) <alex.kavanagh@canonical.com>
+Workflow+1: Alex Kavanagh (tinwood) <alex.kavanagh@canonical.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Thu, 25 Apr 2019 13:00:17 +0000
+Reviewed-on: https://review.opendev.org/629460
+Project: openstack/charm-lxd
+Branch: refs/heads/master
