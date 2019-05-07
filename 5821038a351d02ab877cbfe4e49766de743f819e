@@ -1,0 +1,9 @@
+Verified+1: Canonical CI <uosci-testing-bot@ubuntu.com>
+Code-Review+2: Alex Kavanagh (tinwood) <alex.kavanagh@canonical.com>
+Workflow+1: Alex Kavanagh (tinwood) <alex.kavanagh@canonical.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Tue, 07 May 2019 16:27:50 +0000
+Reviewed-on: https://review.opendev.org/657488
+Project: openstack/charm-lxd
+Branch: refs/heads/stable/19.04
